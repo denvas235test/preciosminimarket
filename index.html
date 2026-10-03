@@ -21,11 +21,12 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.45 Figtree,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
   padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
 .wrap{max-width:720px;margin:0 auto;padding:0 16px 40px}
-header{background:var(--green);color:#fff;padding:28px 16px 74px}
+header{background:var(--green);color:#fff;padding:28px 16px 26px}
 header .in{max-width:720px;margin:0 auto}
 h1{font:800 clamp(28px,7vw,40px)/1.05 "Bricolage Grotesque",Figtree,system-ui,sans-serif;margin:0 0 6px;letter-spacing:-.02em}
 header p{margin:0;opacity:.85}
-.rate{margin-top:-52px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.wrap{padding-top:18px}
+.rate-unused{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
 .rate-main{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .rate-label{color:var(--muted);font-size:14px}
 .rate-value{font:800 34px/1 "Bricolage Grotesque",Figtree,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
@@ -67,7 +68,7 @@ li{align-items:center}
 .rb.minus{background:transparent;color:var(--green);border:1.5px solid var(--green)}
 .rb.minus:hover{background:var(--bg)}
 @media (prefers-color-scheme: dark){ .rb.minus{color:#6FD1A8;border-color:#6FD1A8} }
-.qty{width:54px;text-align:center;padding:10px 4px;font-weight:700;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.step .qty{width:54px;flex:none;text-align:center;padding:10px 4px;font-weight:700;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
 .qty::-webkit-outer-spin-button,.qty::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .bar{position:fixed;left:0;right:0;bottom:0;background:var(--green);color:#fff;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 20px rgba(0,0,0,.18)}
 .bar[hidden]{display:none}
@@ -88,6 +89,15 @@ li{align-items:center}
 .bar button.clear:hover{background:#e0a600}
 .bar input:focus-visible,.bar button:focus-visible{outline-color:#fff}
 
+
+header .chip{display:inline-block;margin-top:14px;border:0;font:600 13px Figtree,sans-serif;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;cursor:default}
+header .chip.ok{background:rgba(255,255,255,.18)}
+header .chip.off{background:var(--sun);color:var(--sun-ink);border:0;cursor:pointer}
+header .manual{margin-top:12px;padding-top:0;border-top:0}
+header .manual label{color:rgba(255,255,255,.85)}
+header .manual input{background:rgba(255,255,255,.95);color:#12281F;border-color:transparent}
+header .manual button.use{background:var(--sun);color:var(--sun-ink)}
+
 @media (prefers-reduced-motion:no-preference){ .bs{transition:opacity .15s} }
 </style>
 </head>
@@ -95,34 +105,22 @@ li{align-items:center}
 <header><div class="in">
   <h1>Minimarket Amazonas</h1>
   <p>Lista de precios en dólares y bolívares</p>
+  <button id="status" type="button" class="chip off" aria-live="polite">Cargando…</button>
+  <div class="manual" id="manualBox" hidden>
+    <label for="manualInput">Tasa BCV de hoy (Bs por $), solo si no hay conexión:</label>
+    <div class="row">
+      <input id="manualInput" type="text" inputmode="decimal" placeholder="Ej: 866,56">
+      <button id="manualSave" type="button" class="use">Usar</button>
+    </div>
+  </div>
 </div></header>
 
 <main class="wrap">
-  <section class="rate" aria-live="polite">
-    <div class="rate-main">
-      <div>
-        <div class="rate-label">Tasa de venta (BCV + <span id="pctLabel">4</span>%)</div>
-        <div class="rate-value"><span id="saleRate">…</span><small>Bs por $</small></div>
-      </div>
-      <span id="status" class="chip off">Cargando tasa…</span>
-    </div>
-    <div class="sub">
-      <div><span>Dólar BCV</span><b id="bcvRate">…</b></div>
-      <div><span id="dateLabel">Actualizado</span><b id="bcvDate">…</b></div>
-    </div>
-    <div class="manual" id="manualBox" hidden>
-      <label for="manualInput">No se pudo leer la tasa del BCV. Escribe la tasa de hoy (Bs por $):</label>
-      <div class="row">
-        <input id="manualInput" type="text" inputmode="decimal" placeholder="866,56">
-        <button id="manualSave" type="button">Usar</button>
-      </div>
-    </div>
-  </section>
 
   <div class="search"><input id="q" type="search" placeholder="Buscar producto" aria-label="Buscar producto" autocomplete="off"></div>
   <p class="count" id="count"></p>
   <ul id="list"></ul>
-  <footer>Toca + para ir sumando la cuenta. Los precios en Bs se redondean al bolívar. Tasa oficial del BCV vía DolarAPI.</footer>
+  <footer>Toca + para ir sumando la cuenta. Los precios en Bs se redondean al bolívar.</footer>
 </main>
 
 
@@ -239,22 +237,20 @@ function setQty(i, v){
 }
 
 function render(){
-  $("pctLabel").textContent = String(RECARGO*100).replace(".",",");
-  $("saleRate").textContent = fmt(tasa(),2);
-  $("bcvRate").textContent = fmt(bcv,2);
   renderList();
   renderBar();
 }
 
+let offline = false;
 function setStatus(ok, text){
-  const el = $("status"); el.textContent = text; el.className = "chip" + (ok ? "" : " off");
-  $("manualBox").hidden = ok;
+  offline = !ok;
+  const el = $("status"); el.textContent = text; el.className = "chip " + (ok ? "ok" : "off");
+  if(ok) $("manualBox").hidden = true;
 }
 
 async function init(){
   const saved = parseFloat(load("tasaManual"));
   bcv = isFinite(saved) && saved > 0 ? saved : RESPALDO;
-  $("bcvDate").textContent = "—";
   render();
   try{
     const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 8000);
@@ -264,18 +260,18 @@ async function init(){
     const v = Number(d.promedio);
     if(!isFinite(v) || v<=0) throw new Error("dato inválido");
     bcv = v; auto = true;
-    store("ultimaAuto", String(v));
-    const f = d.fechaActualizacion ? new Date(d.fechaActualizacion) : null;
-    $("bcvDate").textContent = f && !isNaN(f) ? f.toLocaleDateString("es-VE",{day:"numeric",month:"short",year:"numeric"}) : "hoy";
-    setStatus(true,"Tasa automática");
+    setStatus(true,"Tasa actualizada");
   }catch(e){
-    $("dateLabel").textContent = "Tasa";
-    $("bcvDate").textContent = "manual";
-    setStatus(false,"Sin conexión: tasa manual");
+    setStatus(false,"Sin conexión: usando tasa guardada");
   }
   render();
 }
 
+$("status").addEventListener("click", ()=>{
+  if(!offline) return;
+  const m = $("manualBox"); m.hidden = !m.hidden;
+  if(!m.hidden) $("manualInput").focus();
+});
 $("q").addEventListener("input", renderList);
 $("list").addEventListener("click", e=>{
   const b = e.target.closest("button[data-act]"); if(!b) return;
@@ -304,7 +300,7 @@ $("manualSave").addEventListener("click", ()=>{
   if(raw.includes(",")) raw = raw.replace(/\./g,"").replace(",",".");
   const v = parseFloat(raw);
   if(!isFinite(v) || v<=0){ $("manualInput").focus(); return; }
-  bcv = v; store("tasaManual", String(v)); render();
+  bcv = v; store("tasaManual", String(v)); $("manualBox").hidden = true; render();
 });
 init();
 </script>
