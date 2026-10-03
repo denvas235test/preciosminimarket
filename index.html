@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Precios · Minimarket Amazonas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF3F0; --surface:#FFFFFF; --ink:#12281F; --muted:#5B6F66; --line:#D5E0DA;
+  --green:#0E4D3A; --green-2:#0A3B2C; --sun:#F4B400; --sun-ink:#3A2A00; --warn:#B3261E;
+  --radius:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0D1914; --surface:#15251E; --ink:#E8F1EC; --muted:#93A89E; --line:#26382F; --green:#1C7A5B; --green-2:#12513C; }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.45 Figtree,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px 40px}
+header{background:var(--green);color:#fff;padding:28px 16px 74px}
+header .in{max-width:720px;margin:0 auto}
+h1{font:800 clamp(28px,7vw,40px)/1.05 "Bricolage Grotesque",Figtree,system-ui,sans-serif;margin:0 0 6px;letter-spacing:-.02em}
+header p{margin:0;opacity:.85}
+.rate{margin-top:-52px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.rate-main{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.rate-label{color:var(--muted);font-size:14px}
+.rate-value{font:800 34px/1 "Bricolage Grotesque",Figtree,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.rate-value small{font:500 15px Figtree,sans-serif;color:var(--muted);letter-spacing:0;margin-left:4px}
+.chip{display:inline-block;font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--sun);color:var(--sun-ink)}
+.chip.off{background:transparent;border:1.5px solid var(--warn);color:var(--warn)}
+.sub{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.sub div span{display:block;color:var(--muted);font-size:13px}
+.sub div b{font:700 18px "Bricolage Grotesque",Figtree,sans-serif;font-variant-numeric:tabular-nums}
+.manual{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.manual[hidden]{display:none}
+.manual label{display:block;font-size:14px;color:var(--muted);margin-bottom:6px}
+.manual .row{display:flex;gap:8px}
+input[type=text],input[type=search],input[type=number]{font:inherit;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;width:100%}
+input:focus-visible,button:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+button{font:600 15px Figtree,sans-serif;background:var(--green);color:#fff;border:0;border-radius:10px;padding:12px 16px;cursor:pointer}
+button:hover{background:var(--green-2)}
+.search{margin:20px 0 10px}
+.count{color:var(--muted);font-size:14px;margin:0 0 8px}
+ul{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-top:1px solid var(--line)}
+li:first-child{border-top:0}
+.name{font-weight:600}
+.prices{text-align:right;white-space:nowrap}
+.bs{font:800 21px/1.1 "Bricolage Grotesque",Figtree,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.bs small{font:600 13px Figtree,sans-serif;color:var(--muted);margin-left:3px}
+.usd{color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.empty{padding:28px 16px;text-align:center;color:var(--muted)}
+footer{margin-top:18px;color:var(--muted);font-size:13px}
+@media (prefers-reduced-motion:no-preference){ .bs{transition:opacity .15s} }
+</style>
+</head>
+<body>
+<header><div class="in">
+  <h1>Minimarket Amazonas</h1>
+  <p>Lista de precios en dólares y bolívares</p>
+</div></header>
+
+<main class="wrap">
+  <section class="rate" aria-live="polite">
+    <div class="rate-main">
+      <div>
+        <div class="rate-label">Tasa de venta (BCV + <span id="pctLabel">4</span>%)</div>
+        <div class="rate-value"><span id="saleRate">…</span><small>Bs por $</small></div>
+      </div>
+      <span id="status" class="chip off">Cargando tasa…</span>
+    </div>
+    <div class="sub">
+      <div><span>Dólar BCV</span><b id="bcvRate">…</b></div>
+      <div><span id="dateLabel">Actualizado</span><b id="bcvDate">…</b></div>
+    </div>
+    <div class="manual" id="manualBox" hidden>
+      <label for="manualInput">No se pudo leer la tasa del BCV. Escribe la tasa de hoy (Bs por $):</label>
+      <div class="row">
+        <input id="manualInput" type="text" inputmode="decimal" placeholder="866,56">
+        <button id="manualSave" type="button">Usar</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="search"><input id="q" type="search" placeholder="Buscar producto" aria-label="Buscar producto" autocomplete="off"></div>
+  <p class="count" id="count"></p>
+  <ul id="list"></ul>
+  <footer>Los precios en Bs se redondean al bolívar. Tasa oficial del BCV vía DolarAPI.</footer>
+</main>
+
+<script>
+// ---- Configuración (editar aquí) ----
+const RECARGO = 0.04;                 // 4% sobre la tasa BCV
+const RESPALDO = 866.56;              // tasa BCV de respaldo si falla la conexión
+const API = "https://ve.dolarapi.com/v1/dolares/oficial";
+const PRODUCTOS = [
+  ["Jabón Ace 400g",1.6],["Jabón panela",1.15],["Mayonesa 175g",2.6],
+  ["Salsa tomate 198g",1.8],["Mantequilla 250g",2.4],["Arroz 900g",1.9],
+  ["Harina PAN 1k",1.6],["Pasta Corta kilo",2.4],["Aceite litro",3.5],
+  ["Salsa Napolitana o albahaca",2.6],["Salsa Boloñesa",2.9],["Espagueti",2.0],
+  ["Arroz",1.4],["Sal",1.0],["Azúcar",1.8]
+];
+// -------------------------------------
+
+const $ = id => document.getElementById(id);
+let bcv = null, auto = false;
+
+function fmt(n, dec){
+  const s = Number(n).toLocaleString("en-US",{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  return s.replace(/,/g,"§").replace(/\./g,",").replace(/§/g,".");
+}
+function store(k,v){ try{ localStorage.setItem(k,v) }catch(e){} }
+function load(k){ try{ return localStorage.getItem(k) }catch(e){ return null } }
+function norm(s){ return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"") }
+
+function render(){
+  const tasa = bcv * (1 + RECARGO);
+  $("pctLabel").textContent = String(RECARGO*100).replace(".",",");
+  $("saleRate").textContent = fmt(tasa,2);
+  $("bcvRate").textContent = fmt(bcv,2);
+  const q = norm($("q").value.trim());
+  const items = PRODUCTOS.filter(p => norm(p[0]).includes(q));
+  $("count").textContent = items.length + (items.length===1 ? " producto" : " productos");
+  $("list").innerHTML = items.length ? items.map(([n,p]) =>
+    `<li><span class="name"></span><span class="prices"><div class="bs">${fmt(Math.round(p*tasa),0)}<small>Bs</small></div><div class="usd">$${fmt(p,2)}</div></span></li>`
+  ).join("") : `<li class="empty">No hay productos con ese nombre.</li>`;
+  document.querySelectorAll("#list .name").forEach((el,i)=>{ el.textContent = items[i][0]; });
+}
+
+function setStatus(ok, text){
+  const el = $("status"); el.textContent = text; el.className = "chip" + (ok ? "" : " off");
+  $("manualBox").hidden = ok;
+}
+
+async function init(){
+  const saved = parseFloat(load("tasaManual"));
+  bcv = isFinite(saved) && saved > 0 ? saved : RESPALDO;
+  $("bcvDate").textContent = "—";
+  render();
+  try{
+    const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 8000);
+    const r = await fetch(API,{signal:ctl.signal, cache:"no-store"}); clearTimeout(t);
+    if(!r.ok) throw new Error("http "+r.status);
+    const d = await r.json();
+    const v = Number(d.promedio);
+    if(!isFinite(v) || v<=0) throw new Error("dato inválido");
+    bcv = v; auto = true;
+    store("ultimaAuto", String(v));
+    const f = d.fechaActualizacion ? new Date(d.fechaActualizacion) : null;
+    $("bcvDate").textContent = f && !isNaN(f) ? f.toLocaleDateString("es-VE",{day:"numeric",month:"short",year:"numeric"}) : "hoy";
+    setStatus(true,"Tasa automática");
+  }catch(e){
+    $("dateLabel").textContent = "Tasa";
+    $("bcvDate").textContent = "manual";
+    setStatus(false,"Sin conexión: tasa manual");
+  }
+  render();
+}
+
+$("q").addEventListener("input", render);
+$("manualSave").addEventListener("click", ()=>{
+  let raw = $("manualInput").value.trim().replace(/\s/g,"");
+  if(raw.includes(",")) raw = raw.replace(/\./g,"").replace(",",".");
+  const v = parseFloat(raw);
+  if(!isFinite(v) || v<=0){ $("manualInput").focus(); return; }
+  bcv = v; store("tasaManual", String(v)); render();
+});
+init();
+</script>
+</body>
+</html>
