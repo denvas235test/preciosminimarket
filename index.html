@@ -49,12 +49,45 @@ ul{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid
 li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-top:1px solid var(--line)}
 li:first-child{border-top:0}
 .name{font-weight:600}
-.prices{text-align:right;white-space:nowrap}
-.bs{font:800 21px/1.1 "Bricolage Grotesque",Figtree,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.bs small{font:600 13px Figtree,sans-serif;color:var(--muted);margin-left:3px}
-.usd{color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
 .empty{padding:28px 16px;text-align:center;color:var(--muted)}
 footer{margin-top:18px;color:var(--muted);font-size:13px}
+
+body{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+li{align-items:center}
+.info{min-width:0;flex:1}
+.name{display:block}
+.unit{display:flex;align-items:baseline;gap:8px;margin-top:2px;flex-wrap:wrap}
+.bs{font:800 20px/1.1 "Bricolage Grotesque",Figtree,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.bs small{font:600 13px Figtree,sans-serif;color:var(--muted);margin-left:3px}
+.usd{color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.line{display:block;margin-top:4px;font-size:14px;font-weight:600;color:var(--green);font-variant-numeric:tabular-nums}
+@media (prefers-color-scheme: dark){ .line{color:#6FD1A8} }
+.step{display:flex;align-items:center;gap:6px;flex:none}
+.rb{width:44px;height:44px;padding:0;border-radius:50%;font-size:24px;line-height:1;display:inline-flex;align-items:center;justify-content:center;background:var(--green)}
+.rb.minus{background:transparent;color:var(--green);border:1.5px solid var(--green)}
+.rb.minus:hover{background:var(--bg)}
+@media (prefers-color-scheme: dark){ .rb.minus{color:#6FD1A8;border-color:#6FD1A8} }
+.qty{width:54px;text-align:center;padding:10px 4px;font-weight:700;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.qty::-webkit-outer-spin-button,.qty::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--green);color:#fff;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 20px rgba(0,0,0,.18)}
+.bar[hidden]{display:none}
+.bar .in{max-width:720px;margin:0 auto}
+.sheet{max-height:38vh;overflow:auto;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,.25);padding-bottom:8px}
+.sheet[hidden]{display:none}
+.sl{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:15px}
+.sl span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+.tot{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tot .lbl{font-size:14px;opacity:.85}
+.tot .big{font:800 30px/1 "Bricolage Grotesque",Figtree,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.tot .big small{font:600 15px Figtree,sans-serif;opacity:.85;margin-left:4px}
+.tot .usdt{font-size:15px;opacity:.9;font-variant-numeric:tabular-nums;margin-top:2px}
+.acts{display:flex;gap:8px;flex:none}
+.bar button{background:rgba(255,255,255,.16);padding:11px 14px}
+.bar button:hover{background:rgba(255,255,255,.26)}
+.bar button.clear{background:var(--sun);color:var(--sun-ink)}
+.bar button.clear:hover{background:#e0a600}
+.bar input:focus-visible,.bar button:focus-visible{outline-color:#fff}
+
 @media (prefers-reduced-motion:no-preference){ .bs{transition:opacity .15s} }
 </style>
 </head>
@@ -89,8 +122,26 @@ footer{margin-top:18px;color:var(--muted);font-size:13px}
   <div class="search"><input id="q" type="search" placeholder="Buscar producto" aria-label="Buscar producto" autocomplete="off"></div>
   <p class="count" id="count"></p>
   <ul id="list"></ul>
-  <footer>Los precios en Bs se redondean al bolívar. Tasa oficial del BCV vía DolarAPI.</footer>
+  <footer>Toca + para ir sumando la cuenta. Los precios en Bs se redondean al bolívar. Tasa oficial del BCV vía DolarAPI.</footer>
 </main>
+
+
+<div class="bar" id="bar" hidden>
+  <div class="in">
+    <div class="sheet" id="sheet" hidden></div>
+    <div class="tot">
+      <div>
+        <div class="lbl" id="cnt"></div>
+        <div class="big"><span id="totBs">0</span><small>Bs</small></div>
+        <div class="usdt" id="totUsd"></div>
+      </div>
+      <div class="acts">
+        <button id="toggle" type="button" aria-expanded="false">Ver cuenta</button>
+        <button id="clear" type="button" class="clear">Vaciar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 // ---- Configuración (editar aquí) ----
@@ -117,18 +168,82 @@ function store(k,v){ try{ localStorage.setItem(k,v) }catch(e){} }
 function load(k){ try{ return localStorage.getItem(k) }catch(e){ return null } }
 function norm(s){ return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"") }
 
-function render(){
-  const tasa = bcv * (1 + RECARGO);
-  $("pctLabel").textContent = String(RECARGO*100).replace(".",",");
-  $("saleRate").textContent = fmt(tasa,2);
-  $("bcvRate").textContent = fmt(bcv,2);
+const qty = PRODUCTOS.map(()=>0);
+const MAXQ = 999;
+const tasa = () => bcv * (1 + RECARGO);
+const unitBs = i => Math.round(PRODUCTOS[i][1] * tasa());
+
+function rowEl(i){
+  const li = document.createElement("li");
+  li.dataset.i = i;
+  const q = qty[i];
+  const info = document.createElement("div"); info.className = "info";
+  const name = document.createElement("span"); name.className = "name"; name.textContent = PRODUCTOS[i][0];
+  const unit = document.createElement("div"); unit.className = "unit";
+  unit.innerHTML = `<span class="bs">${fmt(unitBs(i),0)}<small>Bs</small></span><span class="usd">$${fmt(PRODUCTOS[i][1],2)}</span>`;
+  info.append(name, unit);
+  if(q > 0){
+    const line = document.createElement("span"); line.className = "line";
+    line.textContent = `${q} × ${fmt(unitBs(i),0)} = ${fmt(q*unitBs(i),0)} Bs`;
+    info.append(line);
+  }
+  const step = document.createElement("div"); step.className = "step";
+  if(q > 0){
+    step.innerHTML = `<button type="button" class="rb minus" data-act="dec" aria-label="Quitar uno">−</button>
+      <input class="qty" type="number" inputmode="numeric" min="0" max="${MAXQ}" value="${q}" aria-label="Cantidad">
+      <button type="button" class="rb" data-act="inc" aria-label="Agregar uno">+</button>`;
+  }else{
+    step.innerHTML = `<button type="button" class="rb" data-act="inc" aria-label="Agregar">+</button>`;
+  }
+  li.append(info, step);
+  return li;
+}
+
+function renderList(){
   const q = norm($("q").value.trim());
-  const items = PRODUCTOS.filter(p => norm(p[0]).includes(q));
-  $("count").textContent = items.length + (items.length===1 ? " producto" : " productos");
-  $("list").innerHTML = items.length ? items.map(([n,p]) =>
-    `<li><span class="name"></span><span class="prices"><div class="bs">${fmt(Math.round(p*tasa),0)}<small>Bs</small></div><div class="usd">$${fmt(p,2)}</div></span></li>`
-  ).join("") : `<li class="empty">No hay productos con ese nombre.</li>`;
-  document.querySelectorAll("#list .name").forEach((el,i)=>{ el.textContent = items[i][0]; });
+  const idx = PRODUCTOS.map((_,i)=>i).filter(i => norm(PRODUCTOS[i][0]).includes(q));
+  $("count").textContent = idx.length + (idx.length===1 ? " producto" : " productos");
+  const ul = $("list"); ul.textContent = "";
+  if(!idx.length){
+    const li = document.createElement("li"); li.className = "empty"; li.textContent = "No hay productos con ese nombre."; ul.append(li);
+  }else{
+    idx.forEach(i => ul.append(rowEl(i)));
+  }
+}
+
+function renderBar(){
+  let items = 0, bs = 0, usd = 0;
+  qty.forEach((q,i)=>{ if(q>0){ items += q; bs += q*unitBs(i); usd += q*PRODUCTOS[i][1]; } });
+  $("bar").hidden = items === 0;
+  $("cnt").textContent = items + (items===1 ? " artículo" : " artículos");
+  $("totBs").textContent = fmt(bs,0);
+  $("totUsd").textContent = "$" + fmt(usd,2);
+  const sheet = $("sheet");
+  if(items === 0){ sheet.hidden = true; $("toggle").setAttribute("aria-expanded","false"); $("toggle").textContent = "Ver cuenta"; }
+  sheet.textContent = "";
+  qty.forEach((q,i)=>{
+    if(q<=0) return;
+    const d = document.createElement("div"); d.className = "sl";
+    const a = document.createElement("span"); a.textContent = `${q} × ${PRODUCTOS[i][0]}`;
+    const b = document.createElement("span"); b.textContent = `${fmt(q*unitBs(i),0)} Bs`;
+    d.append(a,b); sheet.append(d);
+  });
+}
+
+function setQty(i, v){
+  v = Math.max(0, Math.min(MAXQ, Math.floor(Number(v)) || 0));
+  qty[i] = v;
+  const old = document.querySelector(`#list li[data-i="${i}"]`);
+  if(old) old.replaceWith(rowEl(i));
+  renderBar();
+}
+
+function render(){
+  $("pctLabel").textContent = String(RECARGO*100).replace(".",",");
+  $("saleRate").textContent = fmt(tasa(),2);
+  $("bcvRate").textContent = fmt(bcv,2);
+  renderList();
+  renderBar();
 }
 
 function setStatus(ok, text){
@@ -161,7 +276,29 @@ async function init(){
   render();
 }
 
-$("q").addEventListener("input", render);
+$("q").addEventListener("input", renderList);
+$("list").addEventListener("click", e=>{
+  const b = e.target.closest("button[data-act]"); if(!b) return;
+  const li = b.closest("li"); const i = Number(li.dataset.i);
+  setQty(i, qty[i] + (b.dataset.act === "inc" ? 1 : -1));
+  const again = document.querySelector(`#list li[data-i="${i}"] [data-act="${b.dataset.act}"]`);
+  if(again) again.focus();
+});
+$("list").addEventListener("change", e=>{
+  if(!e.target.classList.contains("qty")) return;
+  setQty(Number(e.target.closest("li").dataset.i), e.target.value);
+});
+$("toggle").addEventListener("click", ()=>{
+  const s = $("sheet"); s.hidden = !s.hidden;
+  $("toggle").setAttribute("aria-expanded", String(!s.hidden));
+  $("toggle").textContent = s.hidden ? "Ver cuenta" : "Ocultar";
+});
+$("clear").addEventListener("click", ()=>{
+  if(!qty.some(q=>q>0)) return;
+  if(!confirm("¿Vaciar la cuenta?")) return;
+  qty.fill(0); render();
+});
+
 $("manualSave").addEventListener("click", ()=>{
   let raw = $("manualInput").value.trim().replace(/\s/g,"");
   if(raw.includes(",")) raw = raw.replace(/\./g,"").replace(",",".");
